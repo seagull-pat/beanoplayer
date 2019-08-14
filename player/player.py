@@ -212,7 +212,7 @@ class App:
 
 root = Tk()
 root.title("BeanoPlayerⒷ 11")
-#root.iconbitmap('resource\\icon.ico')
+root.iconbitmap('resource\\icon.ico')
 
 app = App(root)
 
