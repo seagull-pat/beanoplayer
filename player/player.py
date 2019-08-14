@@ -212,15 +212,11 @@ class App:
 
 root = Tk()
 root.title("BeanoPlayerⒷ 11")
-root.iconbitmap('resource\\icon.ico')
+#root.iconbitmap('resource\\icon.ico')
 
 app = App(root)
 
 app.player = vidx.VidxPlayer()
-
-#app.open_vidx("..\\testvideo\\converted.vidx")
-#app.open_vidx("..\\testvideo\\convertedagain.vidx")  
-
 
 app.update_image()
 
