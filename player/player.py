@@ -87,6 +87,7 @@ class App:
             app.canvas.create_image(0,0,image=image,anchor=NW)
         else:
             app.canvas.create_rectangle(0,0,app.canvas.cget("width"), app.canvas.cget("height"), fill="black")
+            
     def scrub_handle(self,event,pos,*args):
         actual_pos = float(pos) / (1-app.bar_width)
         self.player.set_frame(int(round(actual_pos * (self.player.vidx.frames-1))))
@@ -157,7 +158,7 @@ class App:
             self.status_text.set("Working {:.2f}%".format(percentage))
             success,image = capture.read()
             
-            frame_duration = int(capture.get(cv2.CAP_PROP_POS_MSEC))-last_timestamp
+            frame_duration = int(capture.get(cv2.CAP_PROP_POS_MSEC)-last_timestamp)
             last_timestamp = capture.get(cv2.CAP_PROP_POS_MSEC)
             
             if not success: break
