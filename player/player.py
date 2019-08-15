@@ -189,11 +189,10 @@ class App:
 		<subtitle></subtitle>
 	</meta>
 	<frame-info>
-		<index>{0}</index>
-		<duration>{1}</duration>
-		<data-guid>{2}</data-guid>
+		<duration>{0}</duration>
+		<data-guid>{1}</data-guid>
 	</frame-info>
-</frame>""".format(frames,frame_duration,image_guid))
+</frame>""".format(frame_duration,image_guid))
             pil_image.save("tmpwrite\\{0}.gif".format(image_guid), format="gif")
 
             self.root.update()
