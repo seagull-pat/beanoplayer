@@ -134,7 +134,8 @@ class App:
 
         filelist = [ f for f in os.listdir("tmpwrite") ]
         for f in filelist:
-            os.remove(os.path.join("tmpwrite", f))
+            if not f.startswith("."):
+                os.remove(os.path.join("tmpwrite", f))
 
 
         frames = 0
@@ -162,7 +163,6 @@ class App:
             last_timestamp = capture.get(cv2.CAP_PROP_POS_MSEC)
             if not success: break
             
-            #cv2.imwrite("tmpwrite\\piajffpsaijpisajg.gif",image)
             pil_image = Image.fromarray(cv2.cvtColor(image,cv2.COLOR_BGR2RGB))
 
             image_guid = get_unique_uuid(used_guids)
@@ -191,7 +191,8 @@ class App:
 
         for root, dirs, files in os.walk("tmpwrite"):
             for f in files:
-                zipf.write(os.path.join(root,f), f)
+                if not f.startswith("."):
+                    zipf.write(os.path.join(root,f), f)
 
         zipf.close()
 
