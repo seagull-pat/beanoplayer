@@ -27,7 +27,6 @@ class Vidx():
         with open("tmp\\"+MAGIC_GUID+".xml") as f:
             t = f.read()
 
-            print(t)
             tree = ElementTree.fromstring(t)
             self.version =tree.find("version").text
             self.frames = int(tree.find("frames").text)
@@ -37,9 +36,11 @@ class Vidx():
         """Parses the .xml file for a given frameIndex, and returns a tuple of
         (data GUID, frame duration in ms, subtitle, frame index)"""
         with open("tmp\\"+index_to_GUID(frameIndex)+".xml","r") as f:
-            tree = ElementTree.fromstring(f.read())
+            t = f.read()
+            
+            tree = ElementTree.fromstring(t)
             return (tree.find("frame-info").find("data-guid").text,
-                    int(tree.find("frame-info").find("duration").text),
+                    float(tree.find("frame-info").find("duration").text),
                     tree.find("meta").find("subtitle").text,
                     int(tree.find("frame-info").find("index").text),)
             

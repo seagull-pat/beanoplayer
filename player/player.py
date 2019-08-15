@@ -106,7 +106,6 @@ class App:
         self.bar_width = max(0.1, 1.0/self.player.vidx.frames)
         self.scrub_bar.set(0,self.bar_width)
         self.player.current_frame = 0
-        print("Set canvas size to {0}".format(self.player.vidx.dimensions))
         self.canvas.config(width = self.player.vidx.dimensions[0], height=self.player.vidx.dimensions[1])
         self.update_image()
         self.root.title("BeanoPlayerⒷ 11 - {0}".format(path))
@@ -140,8 +139,6 @@ class App:
 
         frames = 0
         total_frames = capture.get(cv2.CAP_PROP_FRAME_COUNT)
-        print(type(total_frames))
-        print(total_frames)
         
         with open("tmpwrite\\"+vidx.MAGIC_GUID+".xml", "w") as f:
             f.write("""<?xml version="1.0"?>
@@ -159,8 +156,10 @@ class App:
             percentage = 100*float(frames)/float(total_frames)
             self.status_text.set("Working {:.2f}%".format(percentage))
             success,image = capture.read()
-            print(int(capture.get(cv2.CAP_PROP_POS_MSEC))-last_timestamp)
+            
+            frame_duration = int(capture.get(cv2.CAP_PROP_POS_MSEC))-last_timestamp
             last_timestamp = capture.get(cv2.CAP_PROP_POS_MSEC)
+            
             if not success: break
             
             pil_image = Image.fromarray(cv2.cvtColor(image,cv2.COLOR_BGR2RGB))
@@ -169,7 +168,7 @@ class App:
             used_guids.append(image_guid)
 
             image_guid = "{"+str(image_guid)+"}"
-            print("turned {0} to {1}".format(frames,vidx.index_to_GUID(frames)))
+
             with open("tmpwrite\\"+vidx.index_to_GUID(frames)+".xml", "w") as f:
                 f.write("""<?xml version="1.0"?>
 <frame>
@@ -181,9 +180,9 @@ class App:
 		<duration>{1}</duration>
 		<data-guid>{2}</data-guid>
 	</frame-info>
-</frame>""".format(frames,100,image_guid))
+</frame>""".format(frames,frame_duration,image_guid))
             pil_image.save("tmpwrite\\{0}.gif".format(image_guid), format="gif")
-            print(frames)
+
             self.root.update()
             frames += 1
 
@@ -236,8 +235,8 @@ def update():
         root.after(100,update)
         return
     app.player.add_frame()
-    print("Waiting for {0}".format(app.player.needed_frame_time))
-    root.after(app.player.needed_frame_time,update)
+
+    root.after(int(app.player.needed_frame_time),update)
 root.after(0,update)
 
 root.mainloop()
