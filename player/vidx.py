@@ -14,8 +14,9 @@ class Vidx():
     def __init__(self,path):
         "Creates a vidx object from the path to an extracted .vidx file"
         self.path=path
-        with zipfile.ZipFile(path, "r") as z:
-            z.extractall("tmp")
+        with zipfile.ZipFile(path, "r") as z: # Safe alternative to extractall
+            for info in z.infolist():
+                z.extract(info, "tmp")
         self.parse_file_meta()
         
 
@@ -23,7 +24,7 @@ class Vidx():
     
     def parse_file_meta(self):
         "Parses the magic .xml file based on path attribute, and updates metadata attributes"
-        #with open(os.path.join(self.path, self.MAGIC_GUID+".xml"),"r") as f:
+
         with open("tmp\\"+MAGIC_GUID+".xml") as f:
             t = f.read()
 
