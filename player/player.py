@@ -113,7 +113,7 @@ class App:
 
     def menu_open(self):
         path = tkFileDialog.askopenfilename(initialdir = "/",title = "Select .vidx",filetypes = (("VIDX files","*.vidx"),("All files","*.*")))
-        if path != None:
+        if path != "":
             self.status_text.set("Opening {0}".format(path))
             self.root.update()  
             self.open_vidx(path)
@@ -122,11 +122,11 @@ class App:
     def menu_convert(self):
         inpath = tkFileDialog.askopenfilename(initialdir = "/",title = "Select input video file",
         filetypes = (("Video files","*.mp4 *.mov *.avi"),("All files","*.*")))
-        if inpath==None: return
+        if inpath=="": return
 
         outpath = tkFileDialog.asksaveasfilename(initialdir = "/",title = "Select .vidx destination",
         filetypes = (("VIDX files","*.vidx"),("All files","*.*")))
-        if outpath==None: return
+        if outpath=="": return
 
         capture = cv2.VideoCapture(inpath)
 
