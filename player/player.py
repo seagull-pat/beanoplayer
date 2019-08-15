@@ -56,9 +56,12 @@ class App:
         
         
         self.status_text = StringVar()
-        self.status = Label(self.root_frame, text="Ready", bd=1, relief=SUNKEN, anchor=W, textvariable=self.status_text)
+        self.status = Button(self.root_frame, state="disabled", text="Ready", bd=1, relief=SUNKEN, anchor=W, textvariable=self.status_text, command = self.cancel_convert)
         self.status.pack(fill=X,side=BOTTOM)
+
         self.status_text.set("Ready")
+        
+
         
         self.controls.pack(side=BOTTOM,fill=X)
 
@@ -80,6 +83,8 @@ class App:
         menubar.add_cascade(label="File", underline=0, menu=fileMenu)
 
         self.player = vidx.VidxPlayer()
+
+        self.cancelled_convert = False
 
     def update_image(self):
         if self.player.vidx != None:
@@ -118,8 +123,12 @@ class App:
             self.root.update()  
             self.open_vidx(path)
             self.status_text.set("Ready")
-            
+    def cancel_convert(self):
+        self.cancelled_convert = True
+        
     def menu_convert(self):
+        
+        
         inpath = tkFileDialog.askopenfilename(initialdir = "/",title = "Select input video file",
         filetypes = (("Video files","*.mp4 *.mov *.avi"),("All files","*.*")))
         if inpath=="": return
@@ -153,9 +162,12 @@ class App:
                    int(total_frames)))
         used_guids = []
         last_timestamp = 0
+
+        self.status.config(state="active")
+        
         while True:
             percentage = 100*float(frames)/float(total_frames)
-            self.status_text.set("Working {:.2f}%".format(percentage))
+            self.status_text.set("Working {:.2f}% (click to cancel)".format(percentage))
             success,image = capture.read()
             
             frame_duration = int(capture.get(cv2.CAP_PROP_POS_MSEC)-last_timestamp)
@@ -185,6 +197,16 @@ class App:
             pil_image.save("tmpwrite\\{0}.gif".format(image_guid), format="gif")
 
             self.root.update()
+            if self.cancelled_convert:
+                self.cancelled_convert = False
+                self.status_text.set("Ready")
+                self.status.config(state="disabled")
+                tkMessageBox.showwarning(
+            ".vidx conversion",
+            "Cancelled conversion"
+        )
+
+                return
             frames += 1
 
         zipf = zipfile.ZipFile(outpath, 'w', zipfile.ZIP_DEFLATED)
