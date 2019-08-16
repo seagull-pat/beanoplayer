@@ -37,7 +37,7 @@ class App:
         self.canvas = Canvas(self.root_frame, width=640, height=480,highlightthickness=0)
         self.canvas.pack()
         
-        self.controls = Frame(self.root_frame, height=20,bg="black")
+        self.controls = Frame(self.root_frame, height=30, bg="black")
         
         
         for i in range(10):
@@ -56,14 +56,14 @@ class App:
         
         
         self.status_text = StringVar()
-        self.status = Button(self.root_frame, state="disabled", text="Ready", bd=1, relief=SUNKEN, anchor=W, textvariable=self.status_text, command = self.cancel_convert)
+        self.status = Button(self.controls, state="disabled", text="Ready", bd=1, relief=SUNKEN, anchor=W, textvariable=self.status_text, command = self.cancel_convert)
         self.status.pack(fill=X,side=BOTTOM)
 
         self.status_text.set("Ready")
         
 
-        
-        self.controls.pack(side=BOTTOM,fill=X)
+        self.controls.place(relx=1.0,rely=1.0,x=0,y=0, anchor=SE, relwidth=1)
+        #self.controls.pack(side=BOTTOM,fill=X)
 
         menubar = Menu(self.root_frame)
         master.config(menu=menubar)
