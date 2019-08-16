@@ -120,6 +120,7 @@ class App:
         cancelled = self.player.load_vidx(path, update_callback=self.update_open_progress)
         if cancelled:
             self.status.config(state="disabled")
+            self.cancelled_convert = False
             return
         self.bar_width = max(0.1, 1.0/self.player.vidx.frames)
         self.scrub_bar.set(0,self.bar_width)
@@ -216,7 +217,7 @@ class App:
 
             self.root.update() # Update the tkinter window to avoid freezing
             
-            if self.cancelled_convert: # If the cancelled_convert flag was set as a result of the status bar being clicked...
+            if self.cancelled_convert: # If the cancelled_convert flag was set, as a result of the status bar being clicked...
                 self.cancelled_convert = False # reset it
                 self.status_text.set("Ready") # update status bar text
                 self.status.config(state="disabled") # disable the status bar as a button
@@ -277,14 +278,18 @@ last_frame=-1
 
 last_time = time.time()
 
+
+
 def update():
     global last_frame,last_time
     
     app.update_handle()
+
+    image_start = time.time()
     if last_frame != app.player.current_frame:
         app.update_image()
         last_frame=app.player.current_frame
-        
+    image_delta = time.time() - image_start
     
     if app.player.state != 1:
         app.fps_text.set("")
@@ -298,7 +303,7 @@ def update():
 
     app.fps_text.set("{0:.1f} target fps, {1:.1f} actual fps".format(1000.0/app.player.needed_frame_time, 1.0/last_delta))
     
-    root.after(int(app.player.needed_frame_time),update)
+    root.after(max(0, int(app.player.needed_frame_time)-int(image_delta*1000)),update)
     
 root.after(0,update)
 
