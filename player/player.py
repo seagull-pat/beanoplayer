@@ -248,15 +248,15 @@ class App:
                 
                 with open("tmpwrite\\"+vidx.index_to_GUID(frames)+".xml", "w") as f: # Create the frame descriptor file
                     f.write("""<?xml version="1.0"?>
-    <frame>
-            <meta>
-                    <subtitle></subtitle>
-            </meta>
-            <frame-info>
-                    <duration>{0}</duration>
-                    <data-guid>{1}</data-guid>
-            </frame-info>
-    </frame>""".format(frame_duration,image_guid))
+<frame>
+    <meta>
+        <subtitle></subtitle>
+    </meta>
+    <frame-info>
+        <duration>{0}</duration>
+        <data-guid>{1}</data-guid>
+    </frame-info>
+</frame>""".format(frame_duration,image_guid))
                     
                 pil_image.save("tmpwrite\\{0}.gif".format(image_guid), format="gif") # Save the .gif
 
@@ -276,14 +276,14 @@ class App:
 
             with open("tmpwrite\\"+vidx.MAGIC_GUID+".xml", "w") as f: # Create file descriptor
                 f.write("""<?xml version="1.0"?>
-    <video>
-            <version>11</version>
-            <width>{0}</width>
-            <height>{1}</height>
-            <frames>{2}</frames>
-    </video>""".format(int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                       int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-                       int(frames)))
+<video>
+    <version>11</version>
+    <width>{0}</width>
+    <height>{1}</height>
+    <frames>{2}</frames>
+</video>""".format(int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                   int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+                   int(frames)))
 
             self.status_text.set("Compressing...")
             zipf = zipfile.ZipFile(outpath, 'w', zipfile.ZIP_DEFLATED)
