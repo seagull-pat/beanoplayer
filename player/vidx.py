@@ -14,13 +14,16 @@ class Vidx():
     def __init__(self,path, update_callback=(lambda: None), update_every=8):
         "Creates a vidx object from the path to an extracted .vidx file"
         self.path=path
+        self.cancelled = False
         with zipfile.ZipFile(path, "r") as z: # Safe alternative to extractall
             files = z.infolist()
             total = len(files)
             for index,info in enumerate(files):
                 if index % update_every == 0:
-                    update_callback(float(index)/total)
-                z.extract(info, "tmp")
+                    if update_callback(float(index)/total) == True:
+                        self.cancelled = True
+                        return
+                z.extract(info,"tmp")
         self.parse_file_meta()
         
 
@@ -39,7 +42,7 @@ class Vidx():
             
     def parse_frame_meta(self,frameIndex):
         """Parses the .xml file for a given frameIndex, and returns a tuple of
-        (data GUID, frame duration in ms, subtitle, frame index)"""
+            (data GUID, frame duration in ms, subtitle, frame index)"""
         with open("tmp\\"+index_to_GUID(frameIndex)+".xml","r") as f:
             t = f.read()
             
@@ -61,6 +64,9 @@ class VidxPlayer():
         
     def load_vidx(self,path,update_callback=(lambda progress: None)):
         self.vidx = Vidx(path, update_callback=update_callback)
+        if self.vidx.cancelled:
+            self.vidx = None
+            return True
         self.update_frame_meta()
 
     def update_frame_meta(self):

@@ -116,7 +116,11 @@ class App:
     def open_vidx(self,path):
         "Load a .vidx file"
         self.path = path
-        self.player.load_vidx(path, update_callback=self.update_open_progress)
+        self.status.config(state="active")
+        cancelled = self.player.load_vidx(path, update_callback=self.update_open_progress)
+        if cancelled:
+            self.status.config(state="disabled")
+            return
         self.bar_width = max(0.1, 1.0/self.player.vidx.frames)
         self.scrub_bar.set(0,self.bar_width)
         self.player.current_frame = 0
@@ -134,8 +138,13 @@ class App:
             self.status_text.set("Ready")
 
     def update_open_progress(self, progress):
-        self.status_text.set("Opening {0}, {1:.2f}%".format(self.path, progress*100.0))
+        if self.cancelled_convert: # If the cancelled_convert flag was set as a result of the status bar being clicked...
+                self.status_text.set("Ready") # update status bar text
+                self.status.config(state="disabled") # disable the status bar as a button
+                return True
+        self.status_text.set("Opening {0}, {1:.2f}% (click to cancel)".format(self.path, progress*100.0))
         self.root.update()
+        
     def cancel_convert(self):
         "Called when the status bar is clicked, to cancel the conversion"
         self.cancelled_convert = True
@@ -200,16 +209,16 @@ class App:
                 
             pil_image.save("tmpwrite\\{0}.gif".format(image_guid), format="gif") # Save the .gif
 
-            self.root.update() # Update the tkinter window to avoid freezes
+            self.root.update() # Update the tkinter window to avoid freezing
             
             if self.cancelled_convert: # If the cancelled_convert flag was set as a result of the status bar being clicked...
                 self.cancelled_convert = False # reset it
                 self.status_text.set("Ready") # update status bar text
                 self.status.config(state="disabled") # disable the status bar as a button
                 tkMessageBox.showwarning( # Show the cancellation message
-            ".vidx conversion",
-            "Cancelled conversion"
-        )
+                ".vidx conversion",
+                "Cancelled conversion"
+                )
 
                 return # Stop conversion
             frames += 1 # Another frame has been converted
@@ -241,8 +250,6 @@ class App:
             ".vidx conversion",
             "Successfully converted to .vidx"
         )
-
-
 
     def on_exit(self):
         self.quit()
@@ -278,16 +285,16 @@ def update():
         app.fps_text.set("")
         root.after(100,update)
         return
-    app.player.add_frame()
+    if app.player.vidx:
+        app.player.add_frame()
 
     last_delta = time.time()-last_time
     last_time = time.time()
 
-    
     app.fps_text.set("{0:.1f} target fps, {1:.1f} actual fps".format(1000.0/app.player.needed_frame_time, 1.0/last_delta))
     
-    
     root.after(int(app.player.needed_frame_time),update)
+    
 root.after(0,update)
 
 root.mainloop()
