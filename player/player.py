@@ -88,7 +88,7 @@ class App:
         self.player = vidx.VidxPlayer() # Create the VidxPlayer
 
         self.cancelled_convert = False # Initialise cancelled_convert
-
+        self.is_converting = False
     def update_image(self):
         "Update the canvas image to be the current vidx file frame image"
         if self.player.vidx != None:
@@ -151,111 +151,115 @@ class App:
         self.cancelled_convert = True
         
     def menu_convert(self):
-        "Called when the File>Convert video file command is selected"
-        inpath = tkFileDialog.askopenfilename(initialdir = "/",title = "Select input video file", # Prompt to select input video file
-        filetypes = (("Video files","*.mp4 *.mov *.avi"),("All files","*.*")))
-        if inpath=="": return # If no file selected, return
+        self.is_converting = True
+        try:
+            "Called when the File>Convert video file command is selected"
+            inpath = tkFileDialog.askopenfilename(initialdir = "/",title = "Select input video file", # Prompt to select input video file
+            filetypes = (("Video files","*.mp4 *.mov *.avi"),("All files","*.*")))
+            if inpath=="": return # If no file selected, return
 
-        outpath = tkFileDialog.asksaveasfilename(initialdir = "/",title = "Select .vidx destination", # Prompt to select .vidx destination
-        filetypes = (("VIDX files","*.vidx"),("All files","*.*")))
-        if outpath=="": return # If no file selected, return
+            outpath = tkFileDialog.asksaveasfilename(initialdir = "/",title = "Select .vidx destination", # Prompt to select .vidx destination
+            filetypes = (("VIDX files","*.vidx"),("All files","*.*")))
+            if outpath=="": return # If no file selected, return
 
-        capture = cv2.VideoCapture(inpath) # Create the video capture from the input path
+            capture = cv2.VideoCapture(inpath) # Create the video capture from the input path
 
-        if not os.path.isdir("tmpwrite"): # Create tmpwrite if it doesn't exist
-                os.mkdir("tmpwrite")
+            if not os.path.isdir("tmpwrite"): # Create tmpwrite if it doesn't exist
+                    os.mkdir("tmpwrite")
 
-        # Clear tmpwrite folder, as its entire contents (excluding files beginning with '.') are made into a .vidx
-        filelist = [ f for f in os.listdir("tmpwrite") ]
-        for f in filelist:
-            if not f.startswith("."): # Ignore .gitkeep etc
-                os.remove(os.path.join("tmpwrite", f))
+            # Clear tmpwrite folder, as its entire contents (excluding files beginning with '.') are made into a .vidx
+            filelist = [ f for f in os.listdir("tmpwrite") ]
+            for f in filelist:
+                if not f.startswith("."): # Ignore .gitkeep etc
+                    os.remove(os.path.join("tmpwrite", f))
 
 
-        frames = 0 # Number of frames converted so far
-        total_frames_estimate = capture.get(cv2.CAP_PROP_FRAME_COUNT) # Estimate for total number of frames
-        
-        used_guids = [] # GUIDs already used for .gif filenames
-        last_timestamp = 0 # The timestamp in ms from the start of the video of the last converted frame, used to calculate duration
-
-        self.status.config(state="active") # Enable the status bar as a cancel button
-        
-        while True:
-            percentage = 100*float(frames)/float(total_frames_estimate) # Calculate and display an estimate of conversion progress
-            self.status_text.set("Working {:.2f}% (click to cancel)".format(percentage))
+            frames = 0 # Number of frames converted so far
+            total_frames_estimate = capture.get(cv2.CAP_PROP_FRAME_COUNT) # Estimate for total number of frames
             
-            success,image = capture.read() # Capture the next image in the file
-            
-            frame_duration = int(capture.get(cv2.CAP_PROP_POS_MSEC)-last_timestamp) # Calculate this frame duration
-            
-            last_timestamp = capture.get(cv2.CAP_PROP_POS_MSEC) # Update last_timestamp
-            
-            if not success: break # Exit the loop if the image could not be read
-            
-            pil_image = Image.fromarray(cv2.cvtColor(image,cv2.COLOR_BGR2RGB)) # Convert the image to a PIL image
+            used_guids = [] # GUIDs already used for .gif filenames
+            last_timestamp = 0 # The timestamp in ms from the start of the video of the last converted frame, used to calculate duration
 
-            image_guid = get_unique_uuid(used_guids) # Generate a GUID for the .gif, and update the list of used GUIDs
-            used_guids.append(image_guid)
-
-            image_guid = "{"+str(image_guid)+"}" # Create the full GUID
-
+            self.status.config(state="active") # Enable the status bar as a cancel button
             
-            
-            with open("tmpwrite\\"+vidx.index_to_GUID(frames)+".xml", "w") as f: # Create the frame descriptor file
-                f.write("""<?xml version="1.0"?>
-<frame>
-	<meta>
-		<subtitle></subtitle>
-	</meta>
-	<frame-info>
-		<duration>{0}</duration>
-		<data-guid>{1}</data-guid>
-	</frame-info>
-</frame>""".format(frame_duration,image_guid))
+            while True:
+                percentage = 100*float(frames)/float(total_frames_estimate) # Calculate and display an estimate of conversion progress
+                self.status_text.set("Working {:.2f}% (click to cancel)".format(percentage))
                 
-            pil_image.save("tmpwrite\\{0}.gif".format(image_guid), format="gif") # Save the .gif
+                success,image = capture.read() # Capture the next image in the file
+                
+                frame_duration = int(capture.get(cv2.CAP_PROP_POS_MSEC)-last_timestamp) # Calculate this frame duration
+                
+                last_timestamp = capture.get(cv2.CAP_PROP_POS_MSEC) # Update last_timestamp
+                
+                if not success: break # Exit the loop if the image could not be read
+                
+                pil_image = Image.fromarray(cv2.cvtColor(image,cv2.COLOR_BGR2RGB)) # Convert the image to a PIL image
 
-            self.root.update() # Update the tkinter window to avoid freezing
-            
-            if self.cancelled_convert: # If the cancelled_convert flag was set, as a result of the status bar being clicked...
-                self.cancelled_convert = False # reset it
-                self.status_text.set("Ready") # update status bar text
-                self.status.config(state="disabled") # disable the status bar as a button
-                tkMessageBox.showwarning( # Show the cancellation message
+                image_guid = get_unique_uuid(used_guids) # Generate a GUID for the .gif, and update the list of used GUIDs
+                used_guids.append(image_guid)
+
+                image_guid = "{"+str(image_guid)+"}" # Create the full GUID
+
+                
+                
+                with open("tmpwrite\\"+vidx.index_to_GUID(frames)+".xml", "w") as f: # Create the frame descriptor file
+                    f.write("""<?xml version="1.0"?>
+    <frame>
+            <meta>
+                    <subtitle></subtitle>
+            </meta>
+            <frame-info>
+                    <duration>{0}</duration>
+                    <data-guid>{1}</data-guid>
+            </frame-info>
+    </frame>""".format(frame_duration,image_guid))
+                    
+                pil_image.save("tmpwrite\\{0}.gif".format(image_guid), format="gif") # Save the .gif
+
+                self.root.update() # Update the tkinter window to avoid freezing
+                
+                if self.cancelled_convert: # If the cancelled_convert flag was set, as a result of the status bar being clicked...
+                    self.cancelled_convert = False # reset it
+                    self.status_text.set("Ready") # update status bar text
+                    self.status.config(state="disabled") # disable the status bar as a button
+                    tkMessageBox.showwarning( # Show the cancellation message
+                    ".vidx conversion",
+                    "Cancelled conversion"
+                    )
+
+                    return # Stop conversion
+                frames += 1 # Another frame has been converted
+
+            with open("tmpwrite\\"+vidx.MAGIC_GUID+".xml", "w") as f: # Create file descriptor
+                f.write("""<?xml version="1.0"?>
+    <video>
+            <version>11</version>
+            <width>{0}</width>
+            <height>{1}</height>
+            <frames>{2}</frames>
+    </video>""".format(int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                       int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+                       int(frames)))
+
+            self.status_text.set("Compressing...")
+            zipf = zipfile.ZipFile(outpath, 'w', zipfile.ZIP_DEFLATED)
+
+            for root, dirs, files in os.walk("tmpwrite"):
+                for f in files:
+                    if not f.startswith("."):
+                        zipf.write(os.path.join(root,f), f)
+
+            zipf.close()
+
+            self.status_text.set("Ready")
+                
+            tkMessageBox.showinfo(
                 ".vidx conversion",
-                "Cancelled conversion"
-                )
-
-                return # Stop conversion
-            frames += 1 # Another frame has been converted
-
-        with open("tmpwrite\\"+vidx.MAGIC_GUID+".xml", "w") as f: # Create file descriptor
-            f.write("""<?xml version="1.0"?>
-<video>
-	<version>11</version>
-	<width>{0}</width>
-	<height>{1}</height>
-	<frames>{2}</frames>
-</video>""".format(int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)),
-                   int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-                   int(frames)))
-
-        self.status_text.set("Compressing...")
-        zipf = zipfile.ZipFile(outpath, 'w', zipfile.ZIP_DEFLATED)
-
-        for root, dirs, files in os.walk("tmpwrite"):
-            for f in files:
-                if not f.startswith("."):
-                    zipf.write(os.path.join(root,f), f)
-
-        zipf.close()
-
-        self.status_text.set("Ready")
-            
-        tkMessageBox.showinfo(
-            ".vidx conversion",
-            "Successfully converted to .vidx"
-        )
+                "Successfully converted to .vidx"
+            )
+        finally:
+            self.is_converting = False
 
     def on_exit(self):
         self.quit()
@@ -263,6 +267,12 @@ class App:
     def play_pause(self):
         "Toggle the value of self.player.state"
         self.player.state = 0 if self.player.state == 1 else 1
+    def on_window_close(self):
+        if self.is_converting:
+            if tkMessageBox.askokcancel("Quit", "You are currently converting a file, are you sure that you want to quit?"):
+                self.root.destroy()
+        else:
+            self.root.destroy()
 
 root = Tk()
 root.title("BeanoPlayerⒷ 11")
@@ -304,7 +314,8 @@ def update():
     app.fps_text.set("{0:.1f} target fps, {1:.1f} actual fps".format(1000.0/app.player.needed_frame_time, 1.0/last_delta))
     
     root.after(max(0, int(app.player.needed_frame_time)-int(image_delta*1000)),update)
-    
-root.after(0,update)
 
+
+root.protocol("WM_DELETE_WINDOW", app.on_window_close)
+root.after(0,update)
 root.mainloop()
