@@ -56,6 +56,16 @@ class App:
         
         self.status.pack(fill=X,side=BOTTOM)
         self.status_text.set("Ready")
+
+        self.fps_text = StringVar() # Status bar variable
+        self.status_fps = Label(self.status,
+                             text="Ready",
+                             bd=1,
+                             anchor=W,
+                             textvariable=self.fps_text)
+        
+        self.status_fps.pack(fill=X,side=RIGHT)
+        self.fps_text.set("")
         
         self.controls.place(relx=1.0,rely=1.0,x=0,y=0, anchor=SE, relwidth=1) # Places the controls/status container so it stays at the bottom of the window
 
@@ -253,20 +263,30 @@ app.update_image()
 
 last_frame=-1
 
+last_time = time.time()
+
 def update():
-    global last_frame
+    global last_frame,last_time
     
     app.update_handle()
     if last_frame != app.player.current_frame:
         app.update_image()
         last_frame=app.player.current_frame
-    
+        
     
     if app.player.state != 1:
+        app.fps_text.set("")
         root.after(100,update)
         return
     app.player.add_frame()
 
+    last_delta = time.time()-last_time
+    last_time = time.time()
+
+    
+    app.fps_text.set("{0:.1f} target fps, {1:.1f} actual fps".format(1000.0/app.player.needed_frame_time, 1.0/last_delta))
+    
+    
     root.after(int(app.player.needed_frame_time),update)
 root.after(0,update)
 

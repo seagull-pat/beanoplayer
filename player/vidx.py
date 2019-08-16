@@ -11,14 +11,15 @@ def index_to_GUID(index):
     return "{"+padded[:8]+"-"+padded[8:12]+"-"+padded[12:16]+"-"+padded[16:20]+"-"+padded[20:]+"}"
 
 class Vidx():
-    def __init__(self,path, update_callback=(lambda: None)):
+    def __init__(self,path, update_callback=(lambda: None), update_every=8):
         "Creates a vidx object from the path to an extracted .vidx file"
         self.path=path
         with zipfile.ZipFile(path, "r") as z: # Safe alternative to extractall
             files = z.infolist()
             total = len(files)
             for index,info in enumerate(files):
-                update_callback(float(index)/total)
+                if index % update_every == 0:
+                    update_callback(float(index)/total)
                 z.extract(info, "tmp")
         self.parse_file_meta()
         
