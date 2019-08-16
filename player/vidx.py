@@ -45,12 +45,10 @@ class Vidx():
             (data GUID, frame duration in ms, subtitle, frame index)"""
         with open("tmp\\"+index_to_GUID(frameIndex)+".xml","r") as f:
             t = f.read()
-            
             tree = ElementTree.fromstring(t)
             return (tree.find("frame-info").find("data-guid").text,
                     float(tree.find("frame-info").find("duration").text),
-                    tree.find("meta").find("subtitle").text,
-                    int(tree.find("frame-info").find("index").text),)
+                    tree.find("meta").find("subtitle").text,)
             
 class VidxPlayer():
     def __init__(self):
@@ -70,7 +68,7 @@ class VidxPlayer():
         self.update_frame_meta()
 
     def update_frame_meta(self):
-        self.frame_guid, self.needed_frame_time, self.subtitle,_ = self.vidx.parse_frame_meta(self.current_frame)
+        self.frame_guid, self.needed_frame_time, self.subtitle = self.vidx.parse_frame_meta(self.current_frame)
         
     def add_time(self,time):
         self.passed_frame_time = time
