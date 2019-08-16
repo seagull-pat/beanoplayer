@@ -102,3 +102,12 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Project Specific
+tmp/*
+!tmp/.gitkeep 
+
+tmpwrite/*
+!tmpwrite/.gitkeep 
+
+pyi/*
