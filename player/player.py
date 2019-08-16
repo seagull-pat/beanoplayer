@@ -13,7 +13,7 @@ import uuid
 import cv2
 from PIL import Image
 
-
+import json
 
 def get_unique_uuid(used):
     i = uuid.uuid4()
@@ -22,13 +22,47 @@ def get_unique_uuid(used):
     return i
 
 class App:
-
     def __init__(self, master):
         "Initialise widgets and some app attributes"
         
         self.root = master
+        self.create_widgets()
         
-        self.root_frame = Frame(master, bg="black") # Container frame
+        self.player = vidx.VidxPlayer() # Create the VidxPlayer
+
+        self.cancelled_convert = False # Initialise cancelled_convert
+        self.is_converting = False
+
+        if os.path.isfile("config.json"):
+            try:
+                with open("config.json","r") as f:
+                    self.config = json.loads(f.read())
+            except:
+                tkMessageBox.showerror("Couldn't load config", "config.json exists but is invalid: repair it, or delete it and a new file will be created.")
+                self.root.destroy()
+        else:
+            default_config = """
+{
+    "dialogs": {
+        "open": "%UserProfile%",
+        "convert-in": "%UserProfile%",
+        "convert-out": "%UserProfile%"
+        }
+}
+"""
+            self.config = json.loads(default_config)
+            self.save_config()
+            
+                
+
+    def save_config(self):
+        with open("config.json","w") as f:
+            json.dump(self.config, f)
+
+    def create_widgets(self):
+        "Create and initialise widgets"
+        
+        self.root_frame = Frame(self.root, bg="black") # Container frame
         self.root_frame.pack(expand=True, anchor=N,fill=BOTH,side=LEFT)
 
         self.canvas = Canvas(self.root_frame, width=640, height=480,highlightthickness=0) # Main video playback canvas
@@ -40,7 +74,11 @@ class App:
         self.scrub_bar.config(orient=HORIZONTAL, command=self.scrub_handle, width=25)
         self.scrub_bar.pack(side=TOP,fill=X)
 
-        self.play = Button(self.controls, text="Play/Pause", command=self.play_pause, height=2)
+        self.play = Button(self.controls,
+                           text="Play/Pause",
+                           command=self.play_pause,
+                           height=2)
+        
         self.play.pack(side=TOP,fill=X)
         
         
@@ -71,7 +109,7 @@ class App:
 
 
         menubar = Menu(self.root_frame) # Create the top menu bar
-        master.config(menu=menubar) # Configure the root element to use this as the menu bar
+        self.root.config(menu=menubar) # Configure the root element to use this as the menu bar
 
         fileMenu = Menu(menubar,tearoff=False) # Create the file menu
 
@@ -84,11 +122,7 @@ class App:
         fileMenu.add_command(label="Exit", underline=0, command=self.on_exit)
         
         menubar.add_cascade(label="File", underline=0, menu=fileMenu)
-
-        self.player = vidx.VidxPlayer() # Create the VidxPlayer
-
-        self.cancelled_convert = False # Initialise cancelled_convert
-        self.is_converting = False
+        
     def update_image(self):
         "Update the canvas image to be the current vidx file frame image"
         if self.player.vidx != None:
@@ -131,8 +165,11 @@ class App:
 
     def menu_open(self):
         "Called when the File>Open .vidx command is selected"
-        path = tkFileDialog.askopenfilename(initialdir = "/",title = "Select .vidx",filetypes = (("VIDX files","*.vidx"),("All files","*.*")))
+        path = tkFileDialog.askopenfilename(initialdir = self.config["dialogs"]["open"],title = "Select .vidx",filetypes = (("VIDX files","*.vidx"),("All files","*.*")))
+
         if path != "":
+            self.config["dialogs"]["open"] = os.path.split(path)[0]
+            self.save_config()  
             self.status_text.set("Opening {0}".format(path))
             self.root.update()  
             self.open_vidx(path)
@@ -154,13 +191,19 @@ class App:
         self.is_converting = True
         try:
             "Called when the File>Convert video file command is selected"
-            inpath = tkFileDialog.askopenfilename(initialdir = "/",title = "Select input video file", # Prompt to select input video file
+            inpath = tkFileDialog.askopenfilename(initialdir = self.config["dialogs"]["convert-in"],title = "Select input video file", # Prompt to select input video file
             filetypes = (("Video files","*.mp4 *.mov *.avi"),("All files","*.*")))
+            
             if inpath=="": return # If no file selected, return
-
-            outpath = tkFileDialog.asksaveasfilename(initialdir = "/",title = "Select .vidx destination", # Prompt to select .vidx destination
+            self.config["dialogs"]["convert-in"] = os.path.split(inpath)[0]
+            self.save_config()
+            
+            outpath = tkFileDialog.asksaveasfilename(initialdir = self.config["dialogs"]["convert-out"],title = "Select .vidx destination", # Prompt to select .vidx destination
             filetypes = (("VIDX files","*.vidx"),("All files","*.*")))
+            
             if outpath=="": return # If no file selected, return
+            self.config["dialogs"]["convert-out"] = os.path.split(outpath)[0]
+            self.save_config()
 
             capture = cv2.VideoCapture(inpath) # Create the video capture from the input path
 
@@ -278,17 +321,16 @@ root = Tk()
 root.title("BeanoPlayerⒷ 11")
 root.iconbitmap('resource\\icon.ico')
 
+
 app = App(root)
 
 app.player = vidx.VidxPlayer()
-
 app.update_image()
+
 
 last_frame=-1
 
 last_time = time.time()
-
-
 
 def update():
     global last_frame,last_time
