@@ -161,6 +161,9 @@ class App:
 
         capture = cv2.VideoCapture(inpath) # Create the video capture from the input path
 
+        if not os.path.isdir("tmpwrite"): # Create tmpwrite if it doesn't exist
+                os.mkdir("tmpwrite")
+
         # Clear tmpwrite folder, as its entire contents (excluding files beginning with '.') are made into a .vidx
         filelist = [ f for f in os.listdir("tmpwrite") ]
         for f in filelist:
@@ -195,6 +198,8 @@ class App:
 
             image_guid = "{"+str(image_guid)+"}" # Create the full GUID
 
+            
+            
             with open("tmpwrite\\"+vidx.index_to_GUID(frames)+".xml", "w") as f: # Create the frame descriptor file
                 f.write("""<?xml version="1.0"?>
 <frame>
