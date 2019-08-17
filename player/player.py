@@ -384,7 +384,7 @@ class App:
             self.is_converting = False
 
     def on_exit(self):
-        self.quit()
+        self.on_window_close()
 
     def play_pause(self):
         "Toggle the value of self.player.state"
