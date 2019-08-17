@@ -2,7 +2,7 @@
 import vidx
 
 from Tkinter import *   
-import tkFileDialog,tkMessageBox
+import tkFileDialog,tkMessageBox,tkFont
 
 import time
 import os
@@ -15,9 +15,14 @@ from PIL import Image
 
 import json
 
+import webbrowser
+
+import random
+
 PLAYER_VERSION = "v1.0.0"
 
 def get_unique_uuid(used):
+    "Get a unique UUID, guaranteed not to be in the list used"
     i = uuid.uuid4()
     while i in used:
         i = uuid.uuid4()
@@ -28,21 +33,23 @@ class App:
         "Initialise widgets and some app attributes"
         
         self.root = master
+        
         self.create_widgets()
         
         self.player = vidx.VidxPlayer() # Create the VidxPlayer
 
         self.cancelled_convert = False # Initialise cancelled_convert
-        self.is_converting = False
+        
+        self.is_converting = False # Initialise is_converting
 
-        if os.path.isfile("config.json"):
+        if os.path.isfile("config.json"): # If config.json exists, try to load it
             try:
                 with open("config.json","r") as f:
                     self.config = json.loads(f.read())
-            except:
+            except: # It couldn't be opened
                 tkMessageBox.showerror("Couldn't load config", "config.json exists but is invalid: repair it, or delete it and a new file will be created.")
                 self.root.destroy()
-        else:
+        else: # It needs to be created
             default_config = """
 {
     "dialogs": {
@@ -58,6 +65,7 @@ class App:
                 
 
     def save_config(self):
+        "Update the config file with the current application config"
         with open("config.json","w") as f:
             json.dump(self.config, f)
 
@@ -76,7 +84,7 @@ class App:
         self.scrub_bar.config(orient=HORIZONTAL, command=self.scrub_handle, width=25)
         self.scrub_bar.pack(side=TOP,fill=X)
 
-        self.play = Button(self.controls,
+        self.play = Button(self.controls, # Play/pause button
                            text="Play/Pause",
                            command=self.play_pause,
                            height=2)
@@ -114,16 +122,25 @@ class App:
         self.root.config(menu=menubar) # Configure the root element to use this as the menu bar
 
         fileMenu = Menu(menubar,tearoff=False) # Create the file menu
-
-
-        fileMenu.add_command(label="Open .vidx file", command=self.menu_open)
+        fileMenu.add_command(label="Open .vidx file", underline=0,command=self.menu_open, accelerator="Ctrl+O")
+        self.root.bind_all("<Control-o>", self.menu_open)
+        
         fileMenu.add_separator()
-        fileMenu.add_command(label="Convert video file", command=self.menu_convert)
+        fileMenu.add_command(label="Convert video file", underline=0,command=self.menu_convert)
         fileMenu.add_separator()
 
-        fileMenu.add_command(label="Exit", underline=0, command=self.on_exit)
+        fileMenu.add_command(label="Exit", underline=1, command=self.on_exit, accelerator="Alt+F4")
+        
+        helpMenu = Menu(menubar,tearoff=False)
+
+
+        helpMenu.add_command(label="About", underline=0,command=self.menu_about) # Create the about menu
+        helpMenu.add_separator()
+        helpMenu.add_command(label="Documentation", underline=0,command=self.menu_documentation)
         
         menubar.add_cascade(label="File", underline=0, menu=fileMenu)
+        
+        menubar.add_cascade(label="Help", underline=0, menu=helpMenu)
         
     def update_image(self):
         "Update the canvas image to be the current vidx file frame image"
@@ -135,49 +152,106 @@ class App:
             
     def scrub_handle(self,event,pos,*args):
         "Called when the scrub handle is moved"
-        actual_pos = float(pos) / (1-app.bar_width)
+        actual_pos = float(pos) / (1-app.bar_width) # Calculate how far through the video the handle position represents
+
+        # Necessary to round as otherwise int floors, meaning that low frame count videos would be harder to navigate
         self.player.set_frame(int(round(actual_pos * (self.player.vidx.frames-1))))
+        
         self.update_handle()
         
     def update_handle(self):
         "Moves the scrub handle based on video playback position"
         if self.player.vidx:
-            progress = (float(self.player.current_frame) / float(self.player.vidx.frames-1)) * (1-self.bar_width)
+            progress = (float(self.player.current_frame) / float(self.player.vidx.frames-1)) * (1-self.bar_width) # Update the scrub bar based on video position
             self.scrub_bar.set(progress, progress+self.bar_width)
             self.root.update()
         else:
-            self.scrub_bar.set(0,1)
+            self.scrub_bar.set(0,1) # Makes the scrub bar disabled
             self.root.update()  
 
     def open_vidx(self,path):
         "Load a .vidx file"
         self.path = path
         self.status.config(state="active")
-        cancelled = self.player.load_vidx(path, update_callback=self.update_open_progress)
+        cancelled = self.player.load_vidx(path, update_callback=self.update_open_progress) # Load the .vidx file, and check if it was cancelled
         if cancelled:
             self.status.config(state="disabled")
-            self.cancelled_convert = False
+            self.cancelled_convert = False # Reset the cancelled_convert flag
             return
-        self.bar_width = max(0.1, 1.0/self.player.vidx.frames)
-        self.scrub_bar.set(0,self.bar_width)
+        
+        self.bar_width = max(0.1, 1.0/self.player.vidx.frames) # Calculate the bar width
+        self.scrub_bar.set(0,self.bar_width) # Reset the scrub bar position
         self.player.current_frame = 0
-        self.canvas.config(width = self.player.vidx.dimensions[0], height=self.player.vidx.dimensions[1])
-        self.root.geometry("{0}x{1}".format(self.player.vidx.dimensions[0], self.player.vidx.dimensions[1]+self.controls.winfo_height()))
+        self.canvas.config(width = self.player.vidx.dimensions[0], height=self.player.vidx.dimensions[1]) # Make the canvas the correct size for the video
+        
+        self.root.geometry("{0}x{1}".format(self.player.vidx.dimensions[0], self.player.vidx.dimensions[1]+self.controls.winfo_height())) # Make the window the correct size to fit the video and controls
         self.update_image()
         self.root.title("BeanoPlayerⒷ {0} - {1}".format(PLAYER_VERSION,path))
+        
+    def menu_about(self,*args):
+        "When the Help>About menu item is clicked"
+        
+        t = Toplevel(self.root) # Create the about window
+        t.wm_title("About BeanoPlayer")
+        t.focus_force() # Bring the window to the top
+        t.grab_set() # Force the window to stay on top
+        t.iconbitmap('resource\\icon.ico')
 
-    def menu_open(self):
+        self.root.attributes("-disabled",True) # Disable root to prevent flickery behaviour when attempting to focus main window
+        
+        t.protocol("WM_DELETE_WINDOW", lambda *args: (self.root.attributes("-disabled",False), t.destroy())) # Re-enable root when the About window closes
+
+        title_font = tkFont.Font(weight="bold", size="16") # Title font
+        
+        title = Label(t, text="\nBeanoPlayerⒷ {0}".format(PLAYER_VERSION), font=title_font) # Title label
+        title.pack(side="top", fill="x", expand=True, padx=50)
+
+        link_font = tkFont.Font(size="12",underline=True) # Link font
+
+        subtitle = Label(t, text="on Github".format(PLAYER_VERSION), fg="blue", cursor="hand2", font=link_font) # Subtitle with link to Discord
+        subtitle.pack(side="top", fill="x", expand=True)
+        subtitle.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/seagull-pat/beanoplayer"))
+
+        
+        lic = Label(t, text="\nLicensed under GNU LGPLv3\n", fg="blue", cursor="hand2", font=link_font) # License text
+        lic.bind("<Button-1>", lambda e: webbrowser.open("https://www.gnu.org/licenses/lgpl-3.0.en.html"))
+        lic.pack(side="top")
+
+        body_font = tkFont.Font(size="12") # Body font (size=12 is same as default but good to make sure it's the same)
+        
+        description = Label(t, text="Written by seagull-pat in roughly a week under the influence of sleeplessness and long car journeys.\n", font=body_font, wraplength=250) # Description text
+        description.pack(side="top", padx=20)
+
+        # Randomly choose a message for the server link
+        discord_link = Label(t, text=random.choice(["And if your day is going just a bit too well, you can always check out the unofficial CyberDiscovery Discord server",
+                                                    "Fancy significantly worsening your mood? Have a look at the unofficial CyberDiscovery Discord server",
+                                                    "Want to talk to the next generation of lonely computer nerds? Check out the unofficial CyberDiscovery Discord server",
+                                                    "Feel like your faith in the UK's cyber defenses could do with taking down a notch? Check out the unofficial CyberDiscovery Discord server",
+                                                    "Want to talk to a top Canadian forensicator, but feel like email doesn't have enough screaming children? Join the unofficial CyberDiscovery Discord server"])+"\n",
+                             fg="blue",
+                             cursor="hand2",
+                             font=link_font,
+                             wraplength=250)
+        
+        discord_link.pack(side="top", padx=20)
+        discord_link.bind("<Button-1>", lambda e: webbrowser.open("https://discord.gg/Kf8n5rT"))
+
+    def menu_documentation(self,*args):
+        "When the Help>Documentation menu item is selected"
+        webbrowser.open("https://github.com/seagull-pat/beanoplayer/wiki")
+
+    def menu_open(self, *args):
         "Called when the File>Open .vidx command is selected"
-        path = tkFileDialog.askopenfilename(initialdir = self.config["dialogs"]["open"],title = "Select .vidx",filetypes = (("VIDX files","*.vidx"),("All files","*.*")))
+        path = tkFileDialog.askopenfilename(initialdir = self.config["dialogs"]["open"],title = "Select .vidx",filetypes = (("VIDX files","*.vidx"),("All files","*.*"))) # Prompt for a file path
 
-        if path != "":
+        if path != "": # If a path was actually selected
+            self.config["dialogs"]["open"] = os.path.split(path)[0] # Update the last dialog path config
+            self.save_config() # Save config
             
-            self.config["dialogs"]["open"] = os.path.split(path)[0]
-            self.save_config()  
-            self.status_text.set("Opening {0}".format(path))
-            self.root.update()  
+            self.status_text.set("Opening {0}".format(path)) # Update status
+            self.root.update() # Prevent freezing
             self.open_vidx(path)
-            self.status_text.set("Ready")
+            self.status_text.set("Ready") # Reset status when opening finished
 
     def update_open_progress(self, progress):
         if self.cancelled_convert: # If the cancelled_convert flag was set as a result of the status bar being clicked...
@@ -305,6 +379,7 @@ class App:
                 ".vidx conversion",
                 "Successfully converted to .vidx"
             )
+            
         finally:
             self.is_converting = False
 
@@ -314,6 +389,7 @@ class App:
     def play_pause(self):
         "Toggle the value of self.player.state"
         self.player.state = 0 if self.player.state == 1 else 1
+        
     def on_window_close(self):
         if self.is_converting:
             if tkMessageBox.askokcancel("Quit", "You are currently converting a file, are you sure that you want to quit?"):
@@ -332,14 +408,14 @@ app.player = vidx.VidxPlayer()
 app.update_image()
 
 
-last_frame=-1
+last_frame=-1 # So that last_frame will always be different when update is first called
 
-last_time = time.time()
+last_time = time.time() # The last time update was started
 
 def update():
     global last_frame,last_time
     
-    app.update_handle()
+    app.update_handle() # Update scrub bar position
 
     image_start = time.time()
     if last_frame != app.player.current_frame:
@@ -347,21 +423,23 @@ def update():
         last_frame=app.player.current_frame
     image_delta = time.time() - image_start
     
-    if app.player.state != 1:
+    if app.player.state != 1: # We have paused
         app.fps_text.set("")
-        root.after(100,update)
+        root.after(100,update) # Check again in 0.1s if we have unpaused
         return
     if app.player.vidx:
-        app.player.add_frame()
+        app.player.add_frame() # Advance to the next frame
 
     last_delta = time.time()-last_time
     last_time = time.time()
 
     app.fps_text.set("{0:.1f} target fps, {1:.1f} actual fps".format(1000.0/app.player.needed_frame_time, 1.0/last_delta))
     
-    root.after(max(0, int(app.player.needed_frame_time)-int(image_delta*1000)),update)
+    # Figure out how long we should wait, given that we will already have used some time updating the image
+    root.after(max(0, int(app.player.needed_frame_time)-int(image_delta*1000)),update) 
 
 
 root.protocol("WM_DELETE_WINDOW", app.on_window_close)
+
 root.after(0,update)
 root.mainloop()
