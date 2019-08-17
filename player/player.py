@@ -15,6 +15,8 @@ from PIL import Image
 
 import json
 
+PLAYER_VERSION = "v1.0.0"
+
 def get_unique_uuid(used):
     i = uuid.uuid4()
     while i in used:
@@ -162,7 +164,7 @@ class App:
         self.canvas.config(width = self.player.vidx.dimensions[0], height=self.player.vidx.dimensions[1])
         self.root.geometry("{0}x{1}".format(self.player.vidx.dimensions[0], self.player.vidx.dimensions[1]+self.controls.winfo_height()))
         self.update_image()
-        self.root.title("BeanoPlayerⒷ 11 - {0}".format(path))
+        self.root.title("BeanoPlayerⒷ {0} - {1}".format(PLAYER_VERSION,path))
 
     def menu_open(self):
         "Called when the File>Open .vidx command is selected"
@@ -320,7 +322,7 @@ class App:
             self.root.destroy()
 
 root = Tk()
-root.title("BeanoPlayerⒷ 11")
+root.title("BeanoPlayerⒷ {0}".format(PLAYER_VERSION))
 root.iconbitmap('resource\\icon.ico')
 
 
