@@ -160,6 +160,7 @@ class App:
         self.scrub_bar.set(0,self.bar_width)
         self.player.current_frame = 0
         self.canvas.config(width = self.player.vidx.dimensions[0], height=self.player.vidx.dimensions[1])
+        self.root.geometry("{0}x{1}".format(self.player.vidx.dimensions[0], self.player.vidx.dimensions[1]+self.controls.winfo_height()))
         self.update_image()
         self.root.title("BeanoPlayerⒷ 11 - {0}".format(path))
 
@@ -168,6 +169,7 @@ class App:
         path = tkFileDialog.askopenfilename(initialdir = self.config["dialogs"]["open"],title = "Select .vidx",filetypes = (("VIDX files","*.vidx"),("All files","*.*")))
 
         if path != "":
+            
             self.config["dialogs"]["open"] = os.path.split(path)[0]
             self.save_config()  
             self.status_text.set("Opening {0}".format(path))
